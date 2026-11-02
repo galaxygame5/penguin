@@ -63,6 +63,11 @@
             animation: pulseSlot 1.2s infinite ease-in-out;
         }
 
+        .player-passed-card {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: rgba(239, 68, 68, 0.6) !important;
+        }
+
         @keyframes pulseSlot {
             0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
             50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 20px rgba(56, 189, 248, 0.7); }
@@ -220,16 +225,23 @@
             <!-- Player Hand & Operations Area -->
             <div id="actionControlsContainer" class="glass-panel p-4 md:p-6 rounded-3xl border border-cyan-500/30 space-y-4">
                 <div class="flex justify-between items-center border-b border-cyan-500/20 pb-3">
-                    <h4 class="font-black text-base text-white flex items-center gap-2">
-                        <i class="fa-solid fa-hand text-cyan-400"></i> あなたの手札
-                        <span id="selectedCardNotice" class="text-xs text-cyan-300 font-bold ml-2"></span>
-                    </h4>
+                    <div class="flex items-center gap-3">
+                        <h4 class="font-black text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-hand text-cyan-400"></i> あなたの手札
+                            <span id="selectedCardNotice" class="text-xs text-cyan-300 font-bold ml-1"></span>
+                        </h4>
+                        <!-- ★手札ソートボタン -->
+                        <button onclick="sortMyHand()" class="bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow">
+                            <i class="fa-solid fa-arrow-down-a-z"></i> 色順に整列
+                        </button>
+                    </div>
+
                     <button id="passBtn" onclick="passTurn()" class="hidden bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs px-5 py-2.5 rounded-2xl shadow-lg border border-rose-400/40 transition transform active:scale-95">
                         パスする (出せる場所がありません) 🛑
                     </button>
                 </div>
 
-                <!-- My Hand Cards (拡大表示) -->
+                <!-- My Hand Cards -->
                 <div id="myHandContainer" class="flex flex-wrap justify-center gap-3 py-2"></div>
             </div>
 
@@ -256,7 +268,7 @@
             </div>
         </div>
 
-        <!-- VIEW 4: ROUND RESULT MODAL (全プレイヤー共通表示) -->
+        <!-- VIEW 4: ROUND RESULT MODAL -->
         <div id="viewRoundResult" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
             <div class="glass-panel max-w-md w-full rounded-3xl p-6 md:p-8 border-2 border-cyan-400 shadow-2xl text-center animate-pop space-y-5 bg-slate-900">
                 <div class="text-5xl">🧊</div>
@@ -313,15 +325,15 @@
 
     <!-- GAME ENGINE & PEERJS SCRIPT -->
     <script>
-        const PREFIX = "penguin-party-polar-v2-";
+        const PREFIX = "penguin-party-polar-v3-";
 
-        // カード定義（視認性の高いグラデーションとシャドウ）
+        // カード定義
         const CARD_COLORS = {
-            green:  { name: '緑', bg: 'bg-emerald-500', border: 'border-emerald-300', text: 'text-emerald-950', hex: '#10b981' },
-            yellow: { name: '黄', bg: 'bg-amber-400',   border: 'border-amber-200',   text: 'text-amber-950',   hex: '#f59e0b' },
-            red:    { name: '赤', bg: 'bg-rose-500',    border: 'border-rose-300',    text: 'text-rose-950',    hex: '#ef4444' },
-            purple: { name: '紫', bg: 'bg-purple-500',  border: 'border-purple-300',  text: 'text-purple-950',  hex: '#8b5cf6' },
-            blue:   { name: '青', bg: 'bg-sky-500',     border: 'border-sky-200',     text: 'text-sky-950',     hex: '#0284c7' }
+            green:  { name: '緑', bg: 'bg-emerald-500', border: 'border-emerald-300', text: 'text-emerald-950', hex: '#10b981', order: 1 },
+            yellow: { name: '黄', bg: 'bg-amber-400',   border: 'border-amber-200',   text: 'text-amber-950',   hex: '#f59e0b', order: 2 },
+            red:    { name: '赤', bg: 'bg-rose-500',    border: 'border-rose-300',    text: 'text-rose-950',    hex: '#ef4444', order: 3 },
+            purple: { name: '紫', bg: 'bg-purple-500',  border: 'border-purple-300',  text: 'text-purple-950',  hex: '#8b5cf6', order: 4 },
+            blue:   { name: '青', bg: 'bg-sky-500',     border: 'border-sky-200',     text: 'text-sky-950',     hex: '#0284c7', order: 5 }
         };
 
         let peer = null, myId = "", myName = "", roomCode = "";
@@ -372,7 +384,6 @@
                     osc.start(now);
                     osc.stop(now + 0.05);
                 } else if (type === 'place') {
-                    // カード配置 SE
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(320, now);
                     osc.frequency.exponentialRampToValueAtTime(640, now + 0.09);
@@ -381,7 +392,6 @@
                     osc.start(now);
                     osc.stop(now + 0.09);
                 } else if (type === 'my_turn') {
-                    // 手番チャイム SE
                     [523.25, 659.25, 783.99].forEach((freq, i) => {
                         const o = audioCtx.createOscillator();
                         const g = audioCtx.createGain();
@@ -395,7 +405,6 @@
                         o.stop(now + i * 0.08 + 0.2);
                     });
                 } else if (type === 'pass') {
-                    // パス SE
                     osc.type = 'sawtooth';
                     osc.frequency.setValueAtTime(240, now);
                     osc.frequency.linearRampToValueAtTime(120, now + 0.25);
@@ -449,6 +458,18 @@
                 [array[i], array[j]] = [array[j], array[i]];
             }
             return array;
+        }
+
+        // ★手札ソート処理（緑 -> 黄 -> 赤 -> 紫 -> 青）
+        function sortMyHand() {
+            playSound('tap');
+            const myPlayer = roomData.players[myId];
+            if (!myPlayer || !myPlayer.hand) return;
+
+            myPlayer.hand.sort((a, b) => CARD_COLORS[a].order - CARD_COLORS[b].order);
+            selectedCardIndex = null;
+            renderMyHand();
+            renderPyramid();
         }
 
         function showNotice(icon, title, body, duration = 2000) {
@@ -661,7 +682,10 @@
 
             const cardsPerPlayer = Math.floor(deck.length / numPlayers);
             roomData.turnOrder.forEach(pId => {
-                roomData.players[pId].hand = deck.splice(0, cardsPerPlayer);
+                const rawHand = deck.splice(0, cardsPerPlayer);
+                // 初期配布時に自動色ソート
+                rawHand.sort((a, b) => CARD_COLORS[a].order - CARD_COLORS[b].order);
+                roomData.players[pId].hand = rawHand;
             });
 
             roomData.passedPlayers = [];
@@ -672,11 +696,9 @@
             broadcastState();
         }
 
-        // ★【ピラミッド配置判定バグ完全修正】2段目以降は直下の2枚が両方必須！
         function isValidPlacement(pyramid, row, col, cardColor, maxCols) {
             if (pyramid[row][col] !== null) return false;
 
-            // 1段目 (row == 0)
             if (row === 0) {
                 const isRowEmpty = pyramid[0].every(cell => cell === null);
                 if (isRowEmpty) return true;
@@ -686,16 +708,13 @@
                 return hasLeftNeighbor || hasRightNeighbor;
             }
 
-            // 2段目以降 (row > 0)
-            // 下の段 (row - 1) の [col] と [col + 1] の両方が埋まっているかチェック
             const leftBelow = pyramid[row - 1][col];
             const rightBelow = pyramid[row - 1][col + 1];
 
             if (leftBelow === null || rightBelow === null) {
-                return false; // 下の2枚が揃っていない（斜め浮きになる）ため配置不可
+                return false;
             }
 
-            // 土台の2枚のどちらかと同じ色であればOK
             return (cardColor === leftBelow || cardColor === rightBelow);
         }
 
@@ -789,7 +808,6 @@
             Object.values(roomData.players).forEach(p => {
                 const leftover = p.hand.length;
                 if (leftover === 0) {
-                    // ★完走ボーナス：失点チップ2点分回復！
                     const originalPenalty = p.penalty;
                     p.penalty = Math.max(0, p.penalty - 2);
                     const recovered = originalPenalty - p.penalty;
@@ -883,7 +901,6 @@
                 const currentTurnPlayer = roomData.players[currentTurnPlayerId];
                 const isMyTurn = currentTurnPlayerId === myId;
 
-                // ★手番SE連動
                 if (isMyTurn && previousTurnPlayerId !== myId) {
                     playSound('my_turn');
                 }
@@ -914,8 +931,6 @@
                 showView('viewBattle');
                 renderPyramid();
                 renderBattlePlayers();
-
-                // ★全員に簡易リザルト画面を表示
                 renderRoundResultModal();
 
             } else if (roomData.status === 'GAMEOVER') {
@@ -979,6 +994,7 @@
             }
         }
 
+        // ★手番進行順ヘッダー（脱落演出の強化）
         function renderTurnOrderHeader() {
             const container = document.getElementById('turnOrderHeader');
             if (!container) return;
@@ -995,7 +1011,7 @@
                 let pillStyle = "flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl border text-xs font-bold flex-shrink-0 transition-all ";
 
                 if (isPassed) {
-                    pillStyle += "bg-slate-950/80 border-rose-900/50 text-rose-500/70 line-through";
+                    pillStyle += "bg-rose-950/80 border-rose-500/50 text-rose-300/80 line-through animate-pulse";
                 } else if (isTurn) {
                     pillStyle += "bg-cyan-500/20 border-cyan-300 text-cyan-200 ring-2 ring-cyan-400/50 scale-105";
                 } else {
@@ -1005,14 +1021,13 @@
                 pill.className = pillStyle;
                 pill.innerHTML = `
                     <span class="truncate max-w-[80px]">${escapeHtml(p.name)}</span>
-                    ${isPassed ? '<span class="text-[10px] text-rose-400">脱落</span>' : ''}
+                    ${isPassed ? '<span class="text-[10px] bg-rose-500 text-slate-950 px-1 rounded font-black no-underline">脱落</span>' : ''}
                     ${isTurn ? '<span class="text-[9px] bg-cyan-400 text-slate-950 px-1.5 py-0.5 rounded-full font-black">手番</span>' : ''}
                 `;
                 container.appendChild(pill);
             });
         }
 
-        // ピラミッド表示（拡大UI）
         function renderPyramid() {
             const container = document.getElementById('pyramidContainer');
             if (!container) return;
@@ -1034,7 +1049,6 @@
 
                     if (colorKey) {
                         const colDef = CARD_COLORS[colorKey];
-                        // 拡大サイズ: w-14 h-20 (PC時 w-16 h-24)
                         slot.className = `w-14 h-20 md:w-16 md:h-24 rounded-2xl ${colDef.bg} ${colDef.border} border-2 ${colDef.text} font-black flex flex-col items-center justify-center shadow-xl animate-pop border-t-4`;
                         slot.innerHTML = `<span class="text-2xl md:text-3xl">🐧</span><span class="text-xs font-bold mt-0.5">${colDef.name}</span>`;
                     } else {
@@ -1061,7 +1075,6 @@
             }
         }
 
-        // 手札表示（拡大UI）
         function renderMyHand() {
             const container = document.getElementById('myHandContainer');
             const passBtn = document.getElementById('passBtn');
@@ -1096,7 +1109,6 @@
                 const isSelected = selectedCardIndex === idx;
 
                 const card = document.createElement('button');
-                // 拡大サイズ: w-14 h-20 (PC時 w-16 h-24)
                 card.className = `w-14 h-20 md:w-16 md:h-24 rounded-2xl ${colDef.bg} ${colDef.border} border-2 ${colDef.text} font-black flex flex-col items-center justify-center shadow-2xl transition transform ${
                     isSelected ? 'ring-4 ring-white -translate-y-3 scale-110 z-10 border-t-4' : 'hover:-translate-y-1.5 border-t-2'
                 }`;
@@ -1112,6 +1124,7 @@
             });
         }
 
+        // ★各プレイヤーのステータス表示（脱落状態の視認性強化）
         function renderBattlePlayers() {
             const container = document.getElementById('battlePlayersContainer');
             if (!container) return;
@@ -1123,22 +1136,30 @@
                 const isPassed = roomData.passedPlayers.includes(p.id);
 
                 const card = document.createElement('div');
-                card.className = `bg-slate-950/70 p-3 rounded-2xl border flex justify-between items-center text-xs ${
-                    isPassed ? 'opacity-50 border-cyan-500/10' :
-                    isTurn ? 'border-cyan-400 bg-cyan-950/30' : 'border-cyan-500/20'
+                card.className = `p-3.5 rounded-2xl border flex justify-between items-center text-xs transition-all ${
+                    isPassed ? 'player-passed-card animate-pulse' :
+                    isTurn ? 'border-cyan-400 bg-cyan-950/40 ring-1 ring-cyan-400/40' : 'bg-slate-950/70 border-cyan-500/20'
                 }`;
 
                 let statusBadge = '';
-                if (isPassed) statusBadge = '<span class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30">脱落</span>';
-                else if (isTurn) statusBadge = '<span class="text-[10px] bg-cyan-400 text-slate-950 px-2 py-0.5 rounded-full font-black">手番</span>';
+                if (isPassed) {
+                    statusBadge = '<span class="text-xs bg-rose-600 text-white font-black px-2.5 py-0.5 rounded-full shadow flex items-center gap-1">❌ パス脱落</span>';
+                } else if (isTurn) {
+                    statusBadge = '<span class="text-xs bg-cyan-400 text-slate-950 font-black px-2.5 py-0.5 rounded-full shadow">思考中…</span>';
+                }
 
                 card.innerHTML = `
-                    <div class="flex items-center space-x-2">
-                        <span class="font-bold text-slate-100">${escapeHtml(p.name)} ${isMe ? '<span class="text-cyan-300 font-normal">(自分)</span>' : ''}</span>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center font-black ${isPassed ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'}">
+                            ${isPassed ? '💀' : p.name.charAt(0)}
+                        </div>
+                        <span class="font-bold text-sm ${isPassed ? 'text-rose-200 line-through' : 'text-slate-100'}">
+                            ${escapeHtml(p.name)} ${isMe ? '<span class="text-cyan-300 font-normal text-xs">(自分)</span>' : ''}
+                        </span>
                         ${statusBadge}
                     </div>
                     <div class="flex items-center space-x-4">
-                        <div class="text-cyan-200/70">手札: <strong class="text-white font-bold text-sm">${p.hand ? p.hand.length : 0}</strong> 枚</div>
+                        <div class="${isPassed ? 'text-rose-300/80' : 'text-cyan-200/70'}">手札: <strong class="text-white font-bold text-sm">${p.hand ? p.hand.length : 0}</strong> 枚</div>
                         <div class="text-rose-400 font-bold">失点: <strong class="text-lg font-black">${p.penalty}</strong> 🦈</div>
                     </div>
                 `;
@@ -1166,7 +1187,6 @@
             });
         }
 
-        // ★簡易リザルト画面のレンダリング
         function renderRoundResultModal() {
             const modal = document.getElementById('viewRoundResult');
             const listDiv = document.getElementById('roundResultList');
